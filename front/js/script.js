@@ -113,11 +113,11 @@ function newElement(tagId, classList, attributesList, text) {
     1- itemId         - The Item Id used to create the item article
     2- ItemColor      - The color of the item Id used to create the item article
 
-    The item / color different articles need to be displayed on order.
-    The cart is in sequence, however the creation of one article for each item contained is asynchronous so there is no guarantee the articles
-    rendering will respect the cart order.
-    To ensure order is respected, routine will pull all articles off the DOM and research the rank where to insert the one being processed.
-    If it does not find any higher reference to insert before then it returns null.
+    The item different articles need to be displayed as a catalog.
+    The load items to DOM is a sery of function loadItem2WelcomePage calls. 
+    As asynchronous processes there is no guarantee the articles although submitted in sequence get resolved in sequence.
+    To ensure order is respected, routine checks what has been actually inserted to DOM so far and research the rank where to insert 
+    the one being processed. If it does not find any higher reference to insert before then it returns null.
 */
 function findInsertRank(itemId) {
     let elementReference = null;

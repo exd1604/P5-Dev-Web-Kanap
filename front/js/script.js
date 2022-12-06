@@ -25,6 +25,11 @@ FUNCTIONS:
 */
 /* fetchAllItems: Pull a refreshed full set of items from the backend server.   
    -------------
+   Parameters:
+   host: <string> - http address:port of the server
+   api : <string> - api path for a full set of items
+
+   return: { object }
     Uses the fetch method.
     All items from the back server expected to be loaded to the page. 
     Each of the pulled item is then passed to function loadItem2WelcomePage    
@@ -44,6 +49,13 @@ async function fetchAllItems(host, api) {
 
 /* loadItem2WelcomePage: Load item to the DOM.
    ---------------------
+   Parameters:
+   itemId:          <string> - Item code - _id property of the fetch return object 
+   itemName:        <string> - Item name - name property of the fetch return object
+   itemImage:       <string> - Item image - imageURL property of the fetch return object
+   itemDescription: <string> - Item descrption - description property of the fetch return object
+   itemAltTxt:      <string> - Alternate text - altTxt property of the fetch return object
+   
    The card skeletton is:   
    1 - <a> - Link embedding the details allowing a click to get to items details page
         1.1 - <Article>
@@ -87,11 +99,13 @@ function loadItem2WelcomePage(itemId, itemName, itemImage, itemDescription, item
 /* newElement: Creates a new element with potentially class(es) and/or attribute(s)    
    -----------
     Parameters:
-    1- Tagid          - HTML tag name (article, section, div, p, img, etc.....)
-    2- classList      - An array containing the class(es) to set on the element i.e ["class1", "class2", etc.....]. No class pass an empty array
-    3- attributesList - An array of array(s) containing the attributes to set on the element Model: [['attribute id', atribute value]]
-                        i.e [["type", "number"], ["value", 42], etc.....]. No attribute pass an empty array  
-    4- textContent    - Value passed will be added to the element as a text content. If no text required pass null
+    Tagid:          <string>   - HTML tag name (article, section, div, p, img, etc.....)
+    classList:      [array]    - An array containing the class(es) to set on the element i.e ["cls1", "cls2", etc...]. No class pass an empty array
+    attributesList: [[array]]  - An array of array(s). Contains attributes to set on the element Model: [['attribute id', atribute value]]
+                                i.e [["type", "number"], ["value", 42], etc.....]. No attribute pass an empty array  
+    textContent:    <string>   - Value to set on the element as a text content. If no text required pass null
+
+    return: <HTMLElement>
 */
 function newElement(tagId, classList, attributesList, text) {    
     const element = document.createElement(tagId);
@@ -110,12 +124,12 @@ function newElement(tagId, classList, attributesList, text) {
 /* findInsertRank: Research the rank where to insert the new item article    
    ---------------
     Parameters:
-    1- itemId         - The Item Id used to create the item article
-    2- ItemColor      - The color of the item Id used to create the item article
+    itemId:     <string> - The Item Id used to create the item article
 
-    The item different articles need to be displayed as a catalog.
-    The load items to DOM is a sery of function loadItem2WelcomePage calls. 
-    As asynchronous processes there is no guarantee the articles although submitted in sequence get resolved in sequence.
+    return: <HTMLElement>
+
+    The item different articles need to be displayed as a catalog. The load items to DOM is a sery of function loadItem2WelcomePage calls. 
+    As asynchronous processes (promise part of the fetch routine) there is no guarantee the articles get delivered & rendered in sequence.
     To ensure order is respected, routine checks what has been actually inserted to DOM so far and research the rank where to insert 
     the one being processed. If it does not find any higher reference to insert before then it returns null.
 */
@@ -132,6 +146,11 @@ function findInsertRank(itemId) {
 
 /* getStorageCart: Retrieve existing cart off storage to create a working array or create it empty if local storage is empty
    ----------------
+   Parameters:
+   NONE
+
+   return:
+   [array]
 */
 function getStorageCart() {
     try {
@@ -148,8 +167,11 @@ function getStorageCart() {
 /* buildStyle: Build a style variable to potentially add inline style attribute via the new element function.   
    -----------
     Parameter passed is an object containing:
-    key:    styleattribute (Without dash - Value is free as it is not used as such)
-    value:  [style-attribute:, style-value;] 
+    { object} key: styleattribute (Without dash - Value is free as it is not used as such) value:  [style-attribute:, style-value;] 
+              i.e : Refer to cartCounterStyle
+
+    return:
+    <string>
     
     i.e a font size will be defined as object property: fontSize: ['font-size:', '16px;'] 
 */
@@ -163,11 +185,12 @@ function buildStyle(objectStyle) {
 
 /* updateDOMTotals: This update a DOM element text with either total quantity or total value  
    ----------------
-    Once done, the text of the element passed as parameter is updated in DOM.
     Parameter:
     An array of arrays: [[DOM element 1 , value to update],[DOM element 2 , value to update], ....]        
+
+    Once done, the text of the element passed as parameter is updated in DOM.
 */
-function updateDOMTotals(elements, what) {
+function updateDOMTotals(elements) {
     let cartTotals = sumCartTotals();
     elements.forEach((element, index) => {
         if (element[1] == 'quantity') {
@@ -180,8 +203,14 @@ function updateDOMTotals(elements, what) {
 
 /* sumCartTotals: build cart totals (quantity and value)  
    -------------
-   Scans the currentCart array initially loaded and sums quantities and values found per item/color to get totals.
-   Returns an array of 2 elements [total quantity, total value]
+   Parameters:
+   NONE
+
+   Return:
+   [total quantity, total value]
+
+   Scans the currentCart array initially loaded and sums quantities and values found to get totals.
+
 */
 function sumCartTotals() {
     let totals = [0, 0];
@@ -194,6 +223,9 @@ function sumCartTotals() {
 
 /* onCartClick: Call back on link "panier" click
    ------------
+   Parameter:
+   { object type event }
+
    When user clicks to display the cart, process shoots an alert if the cart is empty and prevent default link behavior
 */
 function onCartClick(event) {   

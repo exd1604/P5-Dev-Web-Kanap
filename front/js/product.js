@@ -5,7 +5,7 @@ const hostServer      = 'http://localhost:3000/';
 const apiItem         = 'api/products/';
 //
 let enteredQuantity = 0;
-let selectedColor = '';
+let selectedColorValue = '';
 //
 const cartCounterStyle = {
     fontSize: ['font-size:', '13px;'],
@@ -21,14 +21,26 @@ const cartCounterStyle = {
     marginLeft: ['margin-left:', '5px;']    
 }
 
+const checkStyle = {
+    fontWeight: ['font-weight:', '500;'],
+    color: ['color:', '#fbbcbc;'],
+    textAlign: ['text-align:', 'center;']        
+}
+
 /* FUNCTIONS:
    ---------
 */
 /* fetchSingleItem: Pull item from the backend server   
    ----------------
+   Parameters:
+   host: <string> - http address:port of the server
+   api : <string> - api path for a full set of items   
+   item: <string> - Item id selected by user on welcome page retrieved from the URL search params
+
+   return: { object }
+
    The url is composed of fix value concatenated with the itemid extracted from the url
-   The function uses the fetch method.   
-   The passed item id is used to load its details to the detail item page setting
+   The function uses the fetch method. The passed item id is used to load its details to the detail item page setting
 */
 async function fetchSingleItem(host, api, item) {   
     const reply = await fetch(host + api + item, {
@@ -46,20 +58,32 @@ async function fetchSingleItem(host, api, item) {
 
 /* loadItem2DOM: Load selected item details to the product page DOM.
    ------------  
+   Parameters:
+   { object } - Returned from the fetch response. Contains several properties defining item on back end server. (colors, _id, name, price, 
+                imageUrl, description, altTxt)
    The returned JSON object from the fetch is used to load item elements to the DOM 
 */
 function loadItem2DOM(getReturn) {
     try {
 // Load new element(s)    
-        const newItemImage    = newElement('img', [] , [['src', getReturn.imageUrl], ['alt', getReturn.altTxt]], null);
-        document.querySelector(".item__img").appendChild(newItemImage);
+        //const newItemImage     = newElement('img', [] , [['src', getReturn.imageUrl], ['alt', getReturn.altTxt]], null);
+        document.querySelector(".item__img").appendChild(newElement('img', [] , [['src', getReturn.imageUrl], ['alt', getReturn.altTxt]], null));
 
         if (Array.isArray(getReturn.colors) && getReturn.colors.length > 0) {
             for (let i in getReturn.colors) { 
-                const newColor = newElement('option', [] , ['value', getReturn.colors[i]], getReturn.colors[i]);
-                document.querySelector("#colors").appendChild(newColor);
+                //const newColor = newElement('option', [] , ['value', getReturn.colors[i]], getReturn.colors[i]);
+                document.querySelector("#colors").appendChild(newElement('option', [] , ['value', getReturn.colors[i]], getReturn.colors[i]));
             }
         } 
+
+        //const newColorErrorMsg = newElement('p', [] , [['id', 'colorErrorMsg']], null);
+        //document.querySelector(".item__content__settings__color").appendChild(newElement('p', [] , [['id', 'colorErrorMsg']], null)); 
+        document.querySelector(".item__content__settings__color")
+            .appendChild(newElement('p', [] , [['id', 'colorErrorMsg'],['style', buildStyle(checkStyle)]], null)); 
+                
+        //const newQuantityErrorMsg = newElement('p', [] , [['id', 'quantityErrorMsg']], null);
+        document.querySelector(".item__content__settings__quantity")
+            .appendChild(newElement('p', [] , [['id', 'quantityErrorMsg'],['style', buildStyle(checkStyle)]], null));
 
     // Update existing DOM element(s)
         document.title = getReturn.name;    
@@ -74,11 +98,13 @@ function loadItem2DOM(getReturn) {
 /* newElement: Creates a new element with potentially class(es) and/or attribute(s)    
    -----------
     Parameters:
-    1- Tagid          - HTML tag name (article, section, div, p, img, etc.....)
-    2- classList      - An array containing the class(es) to set on the element i.e ["class1", "class2", etc.....]. No class pass an empty array
-    3- attributesList - An array of array(s) containing the attributes to set on the element Model: [['attribute id', atribute value]]
-                        i.e [["type", "number"], ["value", 42], etc.....]. No attribute pass an empty array  
-    4- textContent    - Value passed will be added to the element as a text content. If no text required pass null
+    Tagid:          <string>   - HTML tag name (article, section, div, p, img, etc.....)
+    classList:      [array]    - An array containing the class(es) to set on the element i.e ["cls1", "cls2", etc...]. No class pass an empty array
+    attributesList: [[array]]  - An array of array(s). Contains attributes to set on the element Model: [['attribute id', atribute value]]
+                                i.e [["type", "number"], ["value", 42], etc.....]. No attribute pass an empty array  
+    textContent:    <string>   - Value to set on the element as a text content. If no text required pass null
+
+    return: <HTMLElement>
 */
 function newElement(tagId, classList, attributesList, text) {    
     const element = document.createElement(tagId);
@@ -97,8 +123,11 @@ function newElement(tagId, classList, attributesList, text) {
 /* buildStyle: Build a style variable to potentially add inline style attribute when necessary   
    -----------
     Parameter passed is an object containing:
-    key:    styleattribute (Without dash - Value is free as it is not used as such)
-    value:  [style-attribute:, style-value;] 
+    { object} key: styleattribute (Without dash - Value is free as it is not used as such) value:  [style-attribute:, style-value;] 
+              i.e : Refer to cartCounterStyle
+
+    return:
+    <string>
     
     i.e a font size will be defined as object property: fontSize: ['font-size:', '16px;'] 
 */
@@ -112,9 +141,10 @@ function buildStyle(objectStyle) {
 
 /* updateDOMTotals: This update a DOM element text with either total quantity or total value  
    ----------------
-    Once done, the text of the element passed as parameter is updated in DOM.
     Parameter:
-    An array of arrays: [[DOM element 1 , value to update],[DOM element 2 , value to update], ....]
+    An array of arrays: [[DOM element 1 , value to update],[DOM element 2 , value to update], ....]        
+    
+    Once done, the text of the element passed as parameter is updated in DOM.
         
 */
 function updateDOMTotals(elements, what) {
@@ -130,8 +160,11 @@ function updateDOMTotals(elements, what) {
 
 /* sumCartTotals: build cart totals (quantity and value)  
    -------------
-   Scans the currentCart array initially loaded and sums quantities and values found per item/color to get totals.
-   Returns an array of 2 elements [total quantity, total value]
+   Parameters:
+   NONE
+   
+   Return:
+   [total quantity, total value]
 */
 function sumCartTotals() {
     let totals = [0, 0];
@@ -144,6 +177,9 @@ function sumCartTotals() {
 
 /* onCartClick: Call back on link "panier" click
    ------------
+   Parameter:
+   { object type event }
+
    When user clicks to display the cart, process shoots an alert if the cart is empty and prevent default link behavior
 */
 function onCartClick(event) {
@@ -155,6 +191,9 @@ function onCartClick(event) {
 
 /* onClickAdd2Cart: Call back on button ("Ajouter au panier") click
    ----------------
+   Parameters:
+   event: { object type event } 
+   
    When user clicks to add the item to the cart the process will:
    1 - Validate a color has been selected - If not shoots an error.
    2 - Once color is selected, routine checks if itemId / color combination already exist in existing cart-
@@ -162,73 +201,108 @@ function onCartClick(event) {
    4 - If no error returned from step 3 then perform the cart feed 
 */
 function onClickAdd2Cart(event) {
-// Check color
-    selectedColor   = document.querySelector("#colors").value;
-    if (checkColor(selectedColor)) {
+    let colorPassed     = false;
+    let quantityPassed  = false;    
+// Check color    
+    selectedColorValue   = document.querySelector("#colors").value;    
+    colorPassed          = checkColor(selectedColorValue);
+
 // Check quantity
-        const itemCartIndex = currentCart.findIndex(itemCart => itemCart[0] == itemId && itemCart[1] == selectedColor);        
-        enteredQuantity   = parseInt(document.querySelector("#quantity").value, 10);
-        if (checkQuantity(enteredQuantity, itemCartIndex)) {
-            feedCart(itemId, selectedColor, enteredQuantity, itemCartIndex);
+    const itemCartIndex = currentCart.findIndex(itemCart => itemCart[0] == itemId && itemCart[1] == selectedColorValue);        
+    enteredQuantity     = fixNan(document.querySelector("#quantity").value, 10);
+    quantityPassed      = checkQuantity(enteredQuantity, colorPassed);
+
+    if (colorPassed && quantityPassed) {
+            feedCart(itemId, selectedColorValue, enteredQuantity, itemCartIndex);
             updateDOMTotals([[cartLinkElement, 'quantity']]);
-        }
-    }
+    }       
+}
+
+/* fixNan: Ensure the value converted using parseInt returns a number and not Nan 
+   -------
+   Parameters:
+   num  <string>    - Field value to potentially convert
+   base integer     - The base used for the conversion (Could be 10, 8, 16 or any other integer)
+*/
+function fixNan(num, base) {
+    const parsed = parseInt(num, base);
+    if (isNaN(parsed)) {
+                return 0
+        };
+    return parsed;
 }
 
 /* checkColor: Validate color
-   ----------     
+   ----------    
+   Parameters:
+   selectColor: <string> 
 */
-function checkColor(selectedColor) {  
-    if (selectedColor == "") {    
-        alert("Vous devez choisir une couleur");
+function checkColor(selectedColorValue) {  
+    const elementColor = document.querySelector("#colors");    
+    const elementColorErrorMsg = document.querySelector("#colorErrorMsg");
+    if (selectedColorValue == "") {  
+        elementColor.style.backgroundColor    = '#fbbcbc';        
+        elementColorErrorMsg.textContent      = 'Vous devez sélectionner une couleur';
+        elementColor.focus();          
         return false;
     } 
+    elementColor.style.backgroundColor = null;
+    elementColorErrorMsg.textContent = ' ';
+    //elementColorErrorMsg.style.fontWeight = null;
     return true; 
 }
 
 /* checkQuantity: Validate Quantity entered
-   -------------     
-   1 - Shoots an error if entered quantity not valid
-   2 - When entered quantity is acceptable 2 possibilities:
-        a - The item Id / selected color combination does not exist in current cart: Creation mode no more check
-        b - The item Id / selected color combination exists in current cart: Process ensures the total requested qty (current cart + entered qty)
-            is not greater than 100.
-            If not it updates currentcart quantity with the total quantity otherwise alert user
+   -------------  
+   Parameters: 
+   enteredQuantity: Number - The quantity entered by the user on screen
+   
+   return:
+   boolean - True when quantity is valid, false when it is wrong. 
+
+   Shoots an error if entered quantity not valid   
 */
-function checkQuantity(enteredQuantity, itemCartIndex) {  
+function checkQuantity(enteredQuantity, colorPassed) { 
+    const elementQuantity = document.querySelector("#quantity"); 
+    const elementQuantityErrorMsg = document.querySelector("#quantityErrorMsg");
     if ((enteredQuantity <= 0) || (enteredQuantity > 100)) {
-        alert(`Quantité ${enteredQuantity} est invalide. Doit être comprise entre 1 et 100 maximum`);                                
+        elementQuantity.style.backgroundColor = '#fbbcbc';
+        if (colorPassed) {
+                elementQuantity.focus();
+        } 
+        elementQuantityErrorMsg.textContent = 'La quantité entrée est invalide. Doit être comprise entre 1 et 100 maximum';
+        //alert(`Quantité entrée est invalide. Doit être comprise entre 1 et 100 maximum`);                                
         return false;        
-    }   else if (itemCartIndex >= 0) {            
-            const itemCartQuantityTotal = currentCart[itemCartIndex][2] + enteredQuantity;              
-            if (itemCartQuantityTotal <= 100) {
-                currentCart[itemCartIndex][2] = itemCartQuantityTotal;                                
-                return true;                
-            } else {
-                alert(`MISE A JOUR REFUSEE: 
-                La quantité totale demandée (Quantité actuelle ${currentCart[itemCartIndex][2]} + Quantité demandée ${enteredQuantity}) est ${itemCartQuantityTotal}. 
-                La quantité totale maximale autorisée par combinaison (Article / Couleur) est 100.`);
-                return false;
-            }            
-        }     
+    }   
+        elementQuantity.style.backgroundColor = null;                     
+        elementQuantityErrorMsg.textContent = ' ';
         return true;                    
 }
 
-/* feedCart: Once all checks have passed, cart is fed with entered values (Item / Color / Quantity) 
+/* feedCart: Once all checks have passed, cart is fed with entered values (Item / Color / Quantity)
    ---------    
-    1 - Creation - The routine searches the first higher element index in the array using the item id/selected color combination as a search key.
-                   If it finds one, it inserts the new one prior to the found key.
-                   If it does not find any index, it just pushes the new combination to the end of the array.
-    2 - Once step one performed (if required), the process refreshes the local storage with the newly updated cart. (To ensure the entered data)
-    are not lost.
+   Parameters:
+   itemId:          <string> - Item Code being processed
+   selectColor:     <string> - Item color being processed
+   enteredQuantity: Number   - The quantity entered by the user on screen
+   itemCartIndex:   Number   - Position of the element in the cart (In cart one element represents one item / color combination)
+
+    1 - Creation mode - The routine inserts (push) the new combination to the end of the array.
+        Change mode   - Routine updates the cart quantity with the entered quantity on screen.
+    2 - Once step one complete, the process refreshes currentCart as well as the local storage with the newly updated cart to ensure the entered
+        data saved.
 */
-function feedCart (itemId, selectedColor, enteredQuantity, itemCartIndex) {
+function feedCart (itemId, selectedColorValue, enteredQuantity, itemCartIndex) {
     try { 
         if (itemCartIndex < 0) {
-                currentCart.push([itemId, selectedColor, enteredQuantity]);                                     
-                alert(`Article ${itemName}, couleur ${selectedColor} quantité ${enteredQuantity} a été ajouté`);        
+                currentCart.push([itemId, selectedColorValue, enteredQuantity]);                                     
+                alert(`Article ${itemName}, couleur ${selectedColorValue} quantité ${enteredQuantity} va être ajouté au panier`);        
         }   else {
-                alert(`Quantité panier pour l\'article ${itemName}, couleur ${selectedColor} mise à jour à ${currentCart[itemCartIndex][2]}`);
+                const cartQuantityB4Change = currentCart[itemCartIndex][2];
+                currentCart[itemCartIndex][2] = enteredQuantity; 
+                alert(`Quantité panier pour l\'article ${itemName}, couleur ${selectedColorValue} va être modifiée.
+                       Quantité panier avant modification est ${cartQuantityB4Change}
+                       Quantité panier aprés modification sera ${enteredQuantity}`);
             }         
 
 // Update local storage            
@@ -243,6 +317,11 @@ function feedCart (itemId, selectedColor, enteredQuantity, itemCartIndex) {
 
 /* getStorageCart: Retrieve existing cart off storage to create a working array or create it empty if local storage is empty
    ----------------
+   Parameters:
+   NONE
+
+   return:
+   [array]
 */
 function getStorageCart() {
     if (localStorage.getItem("currentCart") !== null) {

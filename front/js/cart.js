@@ -6,7 +6,7 @@ const apiItem         = 'api/products/';
 const orderSuffix     = 'order';
 //
 let enteredQuantity = 0;
-let priorChangeQuantity = 0;
+//let priorChangeQuantity = 0;
 let selectedColor = '';
 let totals = [0,0];
 let checkDomLaps  = 500;
@@ -36,12 +36,25 @@ const cartCounterStyle = {
     justifyContent: ['justify-content:', 'center;'],
     alignItems: ['align-items:', 'center;'],
     marginLeft: ['margin-left:', '5px;']    
-}                   
+}      
+
+const quantityStyle = {
+    fontWeight: ['font-weight:', '500;'],
+    color: ['color:', '#fbbcbc;'],
+    textAlign: ['text-align:', 'center;']       
+}
     
 /* FUNCTIONS:
    ---------
-/* getStorageCart: Retrieve existing cart off storage or create it empty if no cart found
-   ---------------
+*/
+/*
+   getStorageCart: Retrieve existing cart off storage to create a working array or create it empty if local storage is empty
+   ----------------
+   Parameters:
+   NONE
+
+   return:
+   [array]
 */
 function getStorageCart() {
     if (localStorage.getItem("currentCart") !== null) {
@@ -51,28 +64,38 @@ function getStorageCart() {
     }
 }
 
-/* getSingleItem: Fetch single item details from the backend server   
-   --------------
+/* fetchSingleItem: Pull item from the backend server   
+   ----------------
+   Parameters:
+   host: <string> - http address:port of the server
+   api : <string> - api path for a full set of items   
+   item: <string> - Item id selected by user on welcome page retrieved from the URL search params
+
+   return: { object }
+
    The url is composed of fix value concatenated with the itemid extracted from the url
-   The function uses the fetch method.   
-   The passed item id is used to load its details to the detail item page setting
+   The function uses the fetch method. The passed item id is used to load its details to the detail item page setting
 */
-async function getSingleItem(host, api, singleItem) {    
-    const reply = await fetch(host + api + singleItem, {
+async function fetchSingleItem(host, api, item) {   
+    const reply = await fetch(host + api + item, {
                                 method: 'GET',
                                 headers: {
                                     "Accept": "application/json"
                                 }
-                            })
+                        })
+    if (reply.ok === true) {
+        return reply.json();
+    }
     
-        if (reply.ok === true) {                                     
-                return reply.json();
-        }
-        throw new Error(`Erreur HTTP ${reply.status}`);
-}     
+    throw new Error(`Erreur HTTP ${reply.status}`);
+}
 
 /* updateCurrentCart: Aggregates additional item elements to the currentCart    
    ------------------
+   Parameters:
+   singleItem:  <string>    - Item Code being submitted for load to DOM (Kicked off when fetch promise is resolved)
+   data:        { object }  - Object body returned by the fetch response
+   
    Function called for each item fetched. 
    This loads to the cart array the necessary additional data to manage items. (product picture, alternate text, product name and price).
    Those elements are not stored in the local storage and get pulled from back end server each time this page gets loaded and/or refreshed.
@@ -85,13 +108,23 @@ function updateCurrentCart(singleItem, data) {
     return singleItem;       
 }
 
-// Update Page Title
+/* updateDocumentTitle:
+   --------------------
+   Parameters:
+   NONE
+
+   Update Page Title
+*/
+
 function updateDocumentTitle() {  
     document.title = "Gérer votre panier";    
 }
 
 /* loadItem2DOM: Feeds the DOM with each item found in the cart    
    ------------
+   singleItem:  [array] - Array containing the item that needs to get loaded detailed data (id, color, Name, description 
+                          image, alttxt, price, quantity) 
+
    Called for each item found in the cart loaded from local storage.
    A new article node gets created and loaded to the DOM to make it available to user.  
    The process:
@@ -129,13 +162,18 @@ function loadItem2DOM(singleItem) {
 
 // Item Settings division (Quantity & delete "button") 
 // Container
-    const newItemContentSettings              = newElement('div', ["cart__item__content__settings"] , [], null);
+    const newItemContentSettings                  = newElement('div', ["cart__item__content__settings"] , [], null);
 // Components  
-    const newItemContentSettingsQuantity      = newElement('div', ["cart__item__content__settings__quantity"] , [], null);
-    const newItemContentSettingsQuantityP     = newElement('p', [] , [], 'Qté :');
-    const newItemContentSettingsQuantityInput = newElement('input', ["itemQuantity"] , [['type', 'number'], ['name', 'itemQuantity'],['min', '1'],['max', '100'],['value', singleItem[2]],], null);
+    const newItemContentSettingsQuantity          = newElement('div', ["cart__item__content__settings__quantity"] , [], null);
+    const newItemContentSettingsQuantityP         = newElement('p', [] , [], 'Qté :');
+    const newItemContentSettingsQuantityInput     = newElement('input', ["itemQuantity"] , [['type', 'number'], ['name', 'itemQuantity'],['min', '1'],['max', '100'],['value', singleItem[2]],], null);
+    
+    const newItemContentSettingsQuantityErrorMsg  = newElement('div', [] , [], null);
+    const newItemContentSettingsQuantityErrorMsgP = newElement('p', [] , [['style', buildStyle(quantityStyle)]], null);
+    newItemContentSettingsQuantityErrorMsg.appendChild(newItemContentSettingsQuantityErrorMsgP);
 // Link parent & children
     newItemContentSettings.appendChild(newItemContentSettingsQuantity).append(newItemContentSettingsQuantityP, newItemContentSettingsQuantityInput);    
+    newItemContentSettings.appendChild(newItemContentSettingsQuantityErrorMsg);    
 
 // Item Settings delete   
 // Container
@@ -160,11 +198,13 @@ function loadItem2DOM(singleItem) {
 /* newElement: Creates a new element with potentially class(es) and/or attribute(s)    
    -----------
     Parameters:
-    1- Tagid          - HTML tag name (article, section, div, p, img, etc.....)
-    2- classList      - An array containing the class(es) to set on the element i.e ["class1", "class2", etc.....]. No class pass an empty array
-    3- attributesList - An array of array(s) containing the attributes to set on the element Model: [['attribute id', atribute value]]
-                        i.e [["type", "number"], ["value", 42], etc.....]. No attribute pass an empty array  
-    4- textContent    - Value passed will be added to the element as a text content. If no text required pass null
+    Tagid:          <string>   - HTML tag name (article, section, div, p, img, etc.....)
+    classList:      [array]    - An array containing the class(es) to set on the element i.e ["cls1", "cls2", etc...]. No class pass an empty array
+    attributesList: [[array]]  - An array of array(s). Contains attributes to set on the element Model: [['attribute id', atribute value]]
+                                i.e [["type", "number"], ["value", 42], etc.....]. No attribute pass an empty array  
+    textContent:    <string>   - Value to set on the element as a text content. If no text required pass null
+
+    return: <HTMLElement>
 */
 function newElement(tagId, classList, attributesList, text) {    
     const element = document.createElement(tagId);
@@ -183,15 +223,15 @@ function newElement(tagId, classList, attributesList, text) {
 /* findInsertRank: Research the rank where to insert the new item article    
    ---------------
     Parameters:
-    1- itemId         - The Item Id used to create the item article
-    2- ItemColor      - The color of the item Id used to create the item article
+    itemId:     <string> - The Item Id being loaded
+    itemColor:  <string> - The color of the item being processed
 
-    The item / color different articles need to be displayed on order.
-    The process of cart items is a fetch so by definition an asynchronous process based on promise resolutions.
-    So there is no guarantee the articles will be rendered in sequence.
-    To ensure order is respected, routine checks what articles have been rendered so far and research the rank where to insert 
-    the one being processed. If it does not find any higher reference to insert before then it returns null which  will insert new article to end
-    of the section.
+    return: <HTMLElement>
+    
+    The item/color articles need to be displayed on screen. The load of item/colors to DOM is a sery of function loadItem2DOM calls. 
+    As asynchronous processes (promise part of the fetch routine) there is no guarantee the articles get delivered & rendered in sequence.
+    To ensure order is respected (By item / color), routine checks what has been actually inserted to DOM so far and research the rank where to 
+    insert the one being processed. If it does not find any higher reference to insert before then it returns null.
 */
 function findInsertRank(itemId, itemColor) {
     let elementReference = null;
@@ -207,8 +247,11 @@ function findInsertRank(itemId, itemColor) {
 /* buildStyle: Build a style variable to potentially add inline style attribute via the new element function.   
    -----------
     Parameter passed is an object containing:
-    key:    styleattribute (Without dash - Value is free as it is not used as such)
-    value:  [style-attribute:, style-value;] 
+    { object} key: styleattribute (Without dash - Value is free as it is not used as such) value:  [style-attribute:, style-value;] 
+              i.e : Refer to cartCounterStyle
+
+    return:
+    <string>
     
     i.e a font size will be defined as object property: fontSize: ['font-size:', '16px;'] 
 */
@@ -222,12 +265,13 @@ function buildStyle(objectStyle) {
 
 /* updateDOMTotals: This update a DOM element text with either total quantity or total value  
    ----------------
+   Parameter:
+    An array of arrays: [[DOM element 1 , value to update],[DOM element 2 , value to update], ....]        
+    
     Once done, the text of the element passed as parameter is updated in DOM.
-    Parameter:
-    An array of arrays: [[DOM element 1 , value to update],[DOM element 2 , value to update], ....]
         
 */
-function updateDOMTotals(elements, what) {
+function updateDOMTotals(elements) {
     let cartTotals = sumCartTotals();
     elements.forEach((element, index) => {
         if (element[1] == 'quantity') {
@@ -240,8 +284,11 @@ function updateDOMTotals(elements, what) {
 
 /* sumCartTotals: build cart totals (quantity and value)  
    -------------
-   Scans the currentCart array initially loaded and sums quantities and values found per item/color to get totals.
-   Returns an array of 2 elements [total quantity, total value]
+   Parameters:
+   NONE
+   
+   Return:
+   [total quantity, total value]
 */
 function sumCartTotals() {
     let totals = [0, 0];
@@ -255,13 +302,15 @@ function sumCartTotals() {
 
 /* startCheckDOM: Starts a timer submitting the checkDomLoaded function on a controlled regular basis 
    -------------
- The load of cart items is submitting through various asynchronous threads. One for each item.
- Listeners to allow user interaction with the data can occur only once all cart is loaded to the DOM. 
- This function submits checkDomLoaded function:
- - Every checkDomLaps milliseconds
- - For checkDomCounter times 
-*/
+   Parameters:
+   NONE
 
+    The load of cart items is submitting through various asynchronous threads. One for each item.
+    Listeners to allow user interaction with the data can occur only once all cart is loaded to the DOM. 
+    This function submits checkDomLoaded function:
+    - Every checkDomLaps milliseconds
+    - For checkDomCounter times 
+*/
 function startCheckDOM() {
     localStorage.setItem("DOMCounter", 0);
     checkDomTimer = setInterval(checkDomLoaded, checkDomLaps, currentCart.length);    
@@ -269,7 +318,9 @@ function startCheckDOM() {
 
 /* stopCheckDOM: Stop the process that submits the checkDomLoaded routine  
    -------------
-   Receives the timer id as a parameter.
+   Parameters:
+   timer:   <string>    - The timer id created by the setInterval run above
+   
    It can be kicked in 2 cases:
    1 - DOM is confirmed fully loaded so is available for user action
    2 - DOM is not confirmed loaded after a predetermined number of times (chekDomCounter) (This means abnormal process time during the cart load)
@@ -282,13 +333,19 @@ function stopCheckDOM(timer) {
 
 /* checkDomLoaded: Scans DOM to ensure all items from cart have been actually loaded to the DOM
    --------------
+   Parameter:
+   checkDomCounter: 
    Once all items have been loaded to the DOM this function:
    - Performs the build totals routine and refresh the DOM with totals
    - Kicks the listeners off for each item article to track "delete" requests
    - Stops the timer that submits this function every checkDomLaps milliseconds for checkDomCounter times.
-   If counter reaches zero and DOM is not confirmed loaded, then it stops the timer and displays a message alerting user something wrong
-   has occurred during the cart load 
-   The checkDomCounter parameter equals the cart length so if more items in cart more times to run.  
+   
+   Every time this routine is submitted (setinterval), counter is incremented by 1 and saved in local Storage.
+
+   If counter reaches the number of items in cart and the DOM is not confirmed loaded then it stops the timer and displays a message alerting 
+   user something wrong occurred during the cart load.
+   
+   The checkDomCounter parameter equals the cart length. So if more items in cart more occurrencece of this routine run.  
 */
 function checkDomLoaded(checkDomCounter) { 
     try {
@@ -318,13 +375,16 @@ function checkDomLoaded(checkDomCounter) {
                             localStorage.setItem("DOMCounter", counter);  
                         }
     }   catch   {   console.log('A technical error occurred during the DOM loaded check process');
-                    alert('Un incident technique est survenue pendant le chargement. Certains services ne sont peut être pas actifs et la gestion de votre panier va être incertaine. Contactez le support');
+                    alert('Un incident technique est survenu pendant le chargement. Certains services ne sont peut être pas actifs et la gestion de votre panier va être incertaine. Contactez le support');
                 }
 }
 
 /* startCartListeners: Kick the various cart listeners off to catch user actions 
    -------------------
-   This inititates:
+   Parameters:
+   NONE
+
+   This initiates:
    - onItemEvent: call back functions on item listeners
      1 - Click on the "Supprimer" paragraph to capture the delete item user request
      2 - Change on the quantity to capture the change quantity user request 
@@ -358,6 +418,9 @@ function startCartListeners() {
 
 /* onItemEvent: Process user requested event captured by the listener 
    ------------
+   Parameters:
+   event    { object type event}
+
    - The called back function is the same for a change item quantity request or a delete cart item request. Before processing the action itself
      prerequisites common actions are completed to detect item/color to work on and its corresponding cart index    
         - Related article is researched (To get the item id and color to process)
@@ -371,22 +434,28 @@ function onItemEvent(event) {
     const id2Amend        = event.currentTarget.closest("article").dataset.id;
     const color2Amend     = event.currentTarget.closest("article").dataset.color;    
     const itemName        = event.currentTarget.closest("article").dataset.name;        
-    const enteredQuantity = parseInt(event.currentTarget.value);
+    const enteredQuantity = fixNan(event.currentTarget.value, 10);    
+    const elementQuantity = event.currentTarget; 
+    const elementQuantityErrorMsgP = event.currentTarget.parentNode.nextSibling.firstChild;    
+    
     const cartItemFound   = currentCart.findIndex(element => element[0] == id2Amend && element[1] == color2Amend);
     switch(event.type) {
 // Change: Only one event setup on change: User requested a quantity change on an item/color 
         case 'change':
-            priorChangeQuantity = currentCart[cartItemFound][2];            
+            let priorChangeQuantity = currentCart[cartItemFound][2];            
 
             if (enteredQuantity > 0 && enteredQuantity <= 100) {  
+                    elementQuantity.style.backgroundColor = null;
+                    elementQuantityErrorMsgP.textContent = ' ';                
                     currentCart[cartItemFound][2] = enteredQuantity;             
                     cartStorageUpdate();                    
                     updateDOMTotals([[cartLinkElement, 'quantity'], [document.querySelector('#totalQuantity'), 'quantity'], [document.querySelector('#totalPrice'), 'value']]);                     
+                    alert(`La quantité pour l\'article ${itemName}, couleur ${color2Amend} va être modifiée pour passer de ${priorChangeQuantity} à ${enteredQuantity}`); 
             
             } else {
-                alert(`QUANTITE DEMANDEE ${enteredQuantity} : MODIFICATION IMPOSSIBLE. 
-                La quantité autorisée par combinaison (Article / Couleur) doit être comprise entre 1 et 100.`); 
-                itemArticle.querySelector('input:first-of-type').value = priorChangeQuantity;        
+                elementQuantity.style.backgroundColor = '#fbbcbc';
+                elementQuantityErrorMsgP.textContent   = 'La quantité entrée est invalide. Doit être comprise entre 1 et 100 maximum';
+                elementQuantity.focus();                                         
             }
 
         break;
@@ -402,16 +471,33 @@ function onItemEvent(event) {
                 alert('Votre dernière suppression va vider le panier. Vous aller être rediriger vers la page d\'accueil');                
                 location = './index.html';
             }   else {
-                    alert(`Article ${itemName} couleur ${color2Amend} supprimé. Le panier va être actualisé`);            
+                    alert(`Article ${itemName} couleur ${color2Amend} va être supprimé et le panier va s'actualiser`);            
                 }
         break;
         default:
             console.log(`Sorry, event type ${event.type} n'est pas pris en compte`);
     }     
 } 
-
+    
+/* fixNan: Ensure the value converted using parseInt returns a number and not Nan 
+   -------
+   Parameters:
+   num  <string>    - Field value to potentially convert
+   base integer     - The base used for the conversion (Could be 10, 8, 16 or any other integer)
+*/
+function fixNan(num, base) {
+    const parsed = parseInt(num, base);
+    if (isNaN(parsed)) {
+                return 0
+        };
+    return parsed;
+}
+    
 /* cartStorageUpdate: Pulls 3 first elements of currentCart (ItemId, color, Qty) into a working array to push to local storage for update 
    ------------------
+   Parameters:
+   NONE
+
    In order to ensure the changes are not lost (user leaves the page) a refreshed version of the currentCart needs to be saved in local storage.
    The local storage records only the itemId, color, qty where the currentCart contains more columns as it also stores the name, image, alt text,
    & price
@@ -429,6 +515,9 @@ function cartStorageUpdate() {
 
 /* onFormEvent: Process captured user request on form 
    ------------
+   Parameters:
+   event    { object type event}
+
    2 types of event can occur on the form:
     1 - Change: User has keyed information in the different form fields. Those entries need to be validated
     2 - Click:  User has required an order. If form fields are valid then a POST request is prepared and transmitted to the back end server.
@@ -476,6 +565,9 @@ function onFormEvent(event) {
 
 /* checkForm: Perform the form input's check(s) 
    ----------
+   Parameters:
+   event    { object type event}
+
    2 modes: Individual field or entire form 
     The mode is defined by the id retreived from the event. 
        
@@ -497,10 +589,10 @@ function onFormEvent(event) {
 */
 function checkForm(event) {    
     const formFieldRegEx = {
-        firstName:  /^[A-Z][a-zA-Zé]+(?:-[A-Z][a-zA-Zé]+)?(?:\s[A-Z][a-zA-Zé]+(-[A-Z][a-zA-Zé]+)?){0,2}$/,
-        lastName:   /^[A-Z][a-zA-Z\']+(?:[\s-][A-Z][a-zA-Z\']+){0,5}$/,
-        address:    /^[1,9]\d{1,3}\s(rue|avenue|boulevard|place|allée|chemin|route|square)(?:[\s][a-z\']+){1,8}$/i,
-        city:       /^[a-z\']+(?:[\s-][a-z\']+){0,6}$/i,
+        firstName:  /^[A-Z][a-zé]+(-[A-Z][a-zé]+)?(\s[A-Z][a-zé]+(-[A-Z][a-zé]+)?){0,2}$/,        
+        lastName:   /^[A-Z][\']?[a-z]+([\s-][A-Z][\']?[a-z]+){0,5}$/,        
+        address:    /^\d{1,4}\s(rue|avenue|boulevard|place|allée|chemin|route|square)([\s]{1,2}[a-z][\']{0,1}[a-z]+){1,8}$/i,        
+        city:       /^[a-z]+[\']?[a-z]+([\s-][a-z]+[\']?[a-z]+){0,6}$/i,
         email:      /^[a-z0-9-_.]+@[a-z0-9-_.]+\.[a-z]{2,6}$/
     }
     
@@ -536,7 +628,7 @@ function checkForm(event) {
 /* getFormFields: Retrieves the fields embedded in the form  
    --------------
     parameters:
-        NONE
+    NONE
     
     This feeds an array with the different form fields pulled from the form entries.
     This is used in the whole event form when user clicks on "Commander!" button to place the order or when submitting the order to build the
@@ -552,11 +644,11 @@ function getFormFields() {
 
 /* checkFormField: Runs the actual data quality check on form field 
    ---------------
-    4 parameters:
-        1 - field id
-        2 - regular expression to use for the check 
-        3 - element: form field DOM element
-        4 - elementError: DOM Error field below the form field
+    parameters:
+    input           <string>    - Input id for each input field on form
+    regEx           <string>    - Property value of object formFieldRegEx for the input field being processed
+    element         HTMLElement - Input form HTML Element - style when error (Background color)     
+    elementError    HTMLElement - Error area related to the input form element (Receives the error message to display when error)
     
     During the form validation in checkFormFields function, each field is checked to ensure data entered are valid before sending them to 
     the back end server.
@@ -574,7 +666,7 @@ function checkFormField(input, regEx, element, elementError) {
     const formFieldErrorMsg = {
         firstName: ['* Initiale de chaque prénom en majuscule. Jusqu\'à 3 prénoms possibles. Prénom composé séparé par un -'],
         lastName:  ['* Initiale de chaque composant du nom en majuscule. Caractères \' , - et espace acceptés'],                    
-        address:   ['* Format adresse attendu: N- voie, Type de la voie, Nom de la voie séparatés par un espace'],                   
+        address:   ['* Format adresse attendu: N° de voie, Type de la voie, Nom de la voie séparés par un espace'],                   
         city:      ['* Format ville attendu: De 1 à 7 mots séparés par un espace ou un tiret (-)'],                   
         email:     ['* Format email invalide - identifiant@serveur.domaine']
     }
@@ -595,6 +687,9 @@ function checkFormField(input, regEx, element, elementError) {
 
 /* sendForm: Prepare the form the and POST it to the back end 
    --------
+   Parameters:
+   postRequest  { object of objects }
+
    - Retrieves form fields 
    - Perform checks on each field and display an error message in the DOM if in error
    - If a clean sheet, process the form submission and kick the POST request to the back end server
@@ -608,6 +703,15 @@ function sendForm(postRequest) {
 
 /* postOrder: Fetch an order request including the cart content to the back end server   
    ----------
+   Parameters:
+   host             <string> - host server and port to send the request to (Refer to global variables)
+   api              <string> - api path to reach (Refer to global variables)
+   orderSuffix      <string> - Suffix for the api (Refer to global variables)
+   postRequest      { object of objects } - Request to post to the back end server when submitting an order. (Contains a user form object & an array of items ordered)
+
+   return:
+   { object } - Containing the order number allocated on back end server as well as the user form 
+
    The url is composed of fix value concatenated with order/ suffix
    The function uses the fetch method.   
    Body is:
@@ -631,6 +735,9 @@ async function postOrder(host, api, orderSuffix, postRequest) {
 
 /* orderPage: Redirect user to the confirmation frame displaying the returned order number   
    ---------
+   Parameters:
+   order    { object }  - Object returned by the fetch response
+   
    When POSTING cart to the back end server is successfull, an order number is returned, captured and confirmation page gets displayed.
 */
 function orderPage(order) { 
@@ -646,7 +753,7 @@ function orderPage(order) {
 if (getStorageCart().length > 0) {  
     currentCart.forEach((singleItem, index) => {                                        
 // 2 - Fetch each item to load item data to DOM
-        getSingleItem(hostServer, apiItem, singleItem[0])
+        fetchSingleItem(hostServer, apiItem, singleItem[0])
             .then(getReturn => updateCurrentCart(singleItem, getReturn)) 
             .then(updateCartReturn => loadItem2DOM(updateCartReturn))
             .catch(err => {alert('Erreur pendant le chargement du panier. Chargement incomplet ou panier corrompu')});                                                                     

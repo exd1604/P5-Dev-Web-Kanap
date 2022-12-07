@@ -43,17 +43,22 @@ const checkStyle = {
    The function uses the fetch method. The passed item id is used to load its details to the detail item page setting
 */
 async function fetchSingleItem(host, api, item) {   
-    const reply = await fetch(host + api + item, {
-                                method: 'GET',
-                                headers: {
-                                    "Accept": "application/json"
-                                }
-                        })
-    if (reply.ok === true) {
-        return reply.json();
-    }
-    
-    throw new Error(`Erreur HTTP ${reply.status}`);
+    try {
+        const reply = await fetch(host + api + item, {
+                                    method: 'GET',
+                                    headers: {
+                                        "Accept": "application/json"
+                                    }
+                            })
+        if (reply.ok === true) {
+            return reply.json();
+        }
+        
+        throw new Error(`Erreur de communication avec le serveur. Impossible de charger le produit sélectionné`);
+
+    }   catch(error) {
+            console.log('Le serveur distant ne répond pas. Chargement article demandé impossible');
+        }
 }
 
 /* loadItem2DOM: Load selected item details to the product page DOM.
@@ -338,7 +343,7 @@ const itemId = params.get('id');
 const itemName = params.get('name');
 
 fetchSingleItem(hostServer, apiItem, itemId)
-    .then(getReturn => loadItem2DOM(getReturn)) 
+    .then(getReturn => {loadItem2DOM(getReturn)}) 
     .catch(err => {
                     alert(`Erreur pendant le chargement de l\'article ${itemName} (id: ${itemId}) sélectionné`);
             });

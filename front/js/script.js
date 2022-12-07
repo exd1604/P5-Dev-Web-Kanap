@@ -35,16 +35,22 @@ FUNCTIONS:
     Each of the pulled item is then passed to function loadItem2WelcomePage    
 */
 async function fetchAllItems(host, api) {
-    const reply = await fetch(host+api, {
-                                method: "GET", 
-                                headers: {
-                                    "Accept": "application/json"
-                                }
-                        })                         
-    if (reply.ok === true) {                              
-        return reply.json();
-    }       
-    throw new Error(`Erreur HTTP ${reply.status}`);
+    try {
+        const reply = await fetch(host + api, {
+                                    method: "GET", 
+                                    headers: {
+                                        "Accept": "application/json"
+                                    }
+                            })                         
+        if (reply.ok === true) {                              
+            return reply.json();
+        } 
+
+        throw new Error(`Erreur de communication avec le serveur. Impossible de charger le catalogue de produits`);
+
+    }   catch(error) {
+            alert('Le serveur distant ne répond pas. Chargement catalogue impossible');
+        }
 }
 
 /* loadItem2WelcomePage: Load item to the DOM.
@@ -237,17 +243,18 @@ function onCartClick(event) {
 
 // END OF FUNCTION DEFINITION SECTION
 
-// Root source code
-fetchAllItems(hostServer, apiItem)
+// Root source code            
+fetchAllItems(hostServer, apiItem)    
     .then(getReturn => 
         {
             for (let i in getReturn) {
                 loadItem2WelcomePage(getReturn[i]._id, getReturn[i].name, getReturn[i].imageUrl, getReturn[i].description, getReturn[i].altTxt);                
             }
         }) 
-    .catch(err => {
-                    alert(`${err} détectée pendant le chargement des articles. Réessayez un peu plus tard. Si le problème persiste contactez le support technique`);
-            });
+    .catch(err =>  {
+        alert('Erreur pendant le chargement des articles. Réessayez un peu plus tard. Si le problème persiste contactez le support technique');
+    })
+
 try {
 // Get cart and display totals
     getStorageCart();

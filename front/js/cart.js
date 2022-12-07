@@ -6,7 +6,6 @@ const apiItem         = 'api/products/';
 const orderSuffix     = 'order';
 //
 let enteredQuantity = 0;
-//let priorChangeQuantity = 0;
 let selectedColor = '';
 let totals = [0,0];
 let checkDomLaps  = 500;
@@ -77,17 +76,22 @@ function getStorageCart() {
    The function uses the fetch method. The passed item id is used to load its details to the detail item page setting
 */
 async function fetchSingleItem(host, api, item) {   
-    const reply = await fetch(host + api + item, {
-                                method: 'GET',
-                                headers: {
-                                    "Accept": "application/json"
-                                }
-                        })
-    if (reply.ok === true) {
-        return reply.json();
-    }
-    
-    throw new Error(`Erreur HTTP ${reply.status}`);
+    try {
+        const reply = await fetch(host + api + item, {
+                                    method: 'GET',
+                                    headers: {
+                                        "Accept": "application/json"
+                                    }
+                            })
+        if (reply.ok === true) {
+            return reply.json();
+        }
+        
+        throw new Error(`Erreur de communication avec le serveur. Impossible de charger les informations détaillées du produit ${item}`);
+
+    }   catch(error) {
+            console.log('Remote server failed to respond');
+        }
 }
 
 /* updateCurrentCart: Aggregates additional item elements to the currentCart    
@@ -434,24 +438,22 @@ function onItemEvent(event) {
     const id2Amend        = event.currentTarget.closest("article").dataset.id;
     const color2Amend     = event.currentTarget.closest("article").dataset.color;    
     const itemName        = event.currentTarget.closest("article").dataset.name;        
-    const enteredQuantity = fixNan(event.currentTarget.value, 10);    
-    const elementQuantity = event.currentTarget; 
-    const elementQuantityErrorMsgP = event.currentTarget.parentNode.nextSibling.firstChild;    
-    
+    const enteredQuantity = fixNan(event.currentTarget.value, 10);        
     const cartItemFound   = currentCart.findIndex(element => element[0] == id2Amend && element[1] == color2Amend);
+
     switch(event.type) {
 // Change: Only one event setup on change: User requested a quantity change on an item/color 
         case 'change':
-            let priorChangeQuantity = currentCart[cartItemFound][2];            
+            const elementQuantity = event.currentTarget; 
+            const elementQuantityErrorMsgP = event.currentTarget.parentNode.nextSibling.firstChild;                                
 
             if (enteredQuantity > 0 && enteredQuantity <= 100) {  
                     elementQuantity.style.backgroundColor = null;
                     elementQuantityErrorMsgP.textContent = ' ';                
                     currentCart[cartItemFound][2] = enteredQuantity;             
                     cartStorageUpdate();                    
-                    updateDOMTotals([[cartLinkElement, 'quantity'], [document.querySelector('#totalQuantity'), 'quantity'], [document.querySelector('#totalPrice'), 'value']]);                     
-                    alert(`La quantité pour l\'article ${itemName}, couleur ${color2Amend} va être modifiée pour passer de ${priorChangeQuantity} à ${enteredQuantity}`); 
-            
+                    updateDOMTotals([[cartLinkElement, 'quantity'], [document.querySelector('#totalQuantity'), 'quantity'], [document.querySelector('#totalPrice'), 'value']]);                                         
+                    
             } else {
                 elementQuantity.style.backgroundColor = '#fbbcbc';
                 elementQuantityErrorMsgP.textContent   = 'La quantité entrée est invalide. Doit être comprise entre 1 et 100 maximum';
@@ -591,8 +593,8 @@ function checkForm(event) {
     const formFieldRegEx = {
         firstName:  /^[A-Z][a-zé]+(-[A-Z][a-zé]+)?(\s[A-Z][a-zé]+(-[A-Z][a-zé]+)?){0,2}$/,        
         lastName:   /^[A-Z][\']?[a-z]+([\s-][A-Z][\']?[a-z]+){0,5}$/,        
-        address:    /^\d{1,4}\s(rue|avenue|boulevard|place|allée|chemin|route|square)([\s]{1,2}[a-z][\']{0,1}[a-z]+){1,8}$/i,        
-        city:       /^[a-z]+[\']?[a-z]+([\s-][a-z]+[\']?[a-z]+){0,6}$/i,
+        address:    /^\d{1,4}\s(rue|avenue|boulevard|place|allée|chemin|route|square)\s[A-Za-z][\']?[A-Za-z]+([\s-][A-Za-z0-9][\']?[A-Za-z0-9]{0,}){0,6}$/i,        
+        city:       /^[A-Za-z][\']?[a-z]+([\s-][A-Za-z][\']?[A-Za-z]+){0,6}$/,
         email:      /^[a-z0-9-_.]+@[a-z0-9-_.]+\.[a-z]{2,6}$/
     }
     
@@ -601,8 +603,9 @@ function checkForm(event) {
     {
         getFormFields();
                
-    }   else{
-                formFields.push(eventTargetId);
+    }   else{                
+            formFields = [];
+            formFields.push(eventTargetId);
         }
     
     let error = false;
@@ -612,7 +615,6 @@ function checkForm(event) {
         let elementError = document.querySelector(`#${input}ErrorMsg`);        
         
         const formFieldError = checkFormField(input, formFieldRegEx[input], element, elementError);
-
         if (formFieldError) {
             if ((formFields.length > 1 && !focus) || formFields.length == 1) {
                 element.focus();  
@@ -664,8 +666,8 @@ function getFormFields() {
 */
 function checkFormField(input, regEx, element, elementError) {
     const formFieldErrorMsg = {
-        firstName: ['* Initiale de chaque prénom en majuscule. Jusqu\'à 3 prénoms possibles. Prénom composé séparé par un -'],
-        lastName:  ['* Initiale de chaque composant du nom en majuscule. Caractères \' , - et espace acceptés'],                    
+        firstName: ['* Lettres uniquement. Initiale de chaque prénom en majuscule. Jusqu\'à 3 prénoms possibles. Prénom composé séparé par un -'],
+        lastName:  ['* Lettres uniquement. Initiale de chaque composant du nom en majuscule. Caractères \' , - et espace acceptés'],                    
         address:   ['* Format adresse attendu: N° de voie, Type de la voie, Nom de la voie séparés par un espace'],                   
         city:      ['* Format ville attendu: De 1 à 7 mots séparés par un espace ou un tiret (-)'],                   
         email:     ['* Format email invalide - identifiant@serveur.domaine']
@@ -719,18 +721,23 @@ function sendForm(postRequest) {
    - Array of items contained in the cart
 */
 async function postOrder(host, api, orderSuffix, postRequest) {    
-    const reply = await fetch(host + api + orderSuffix, {
-                                method: 'POST',
-                                headers: {
-                                    "Accept": "application/json",
-                                    "Content-Type": "application/json"
-                                },
-                                body: JSON.stringify(postRequest)
-                            })
+    try {
+        const reply = await fetch(host + api + orderSuffix, {
+                                    method: 'POST',
+                                    headers: {
+                                        "Accept": "application/json",
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify(postRequest)
+                                })
         if (reply.ok === true) {
                 return reply.json();
         }        
-        throw new Error(`Erreur HTTP ${reply.status}`);
+        throw new Error(`Le serveur distant a répondu négativement. Votre commande n\'est pas confirmée.`);
+
+    }   catch(error) {
+            alert('Le serveur distant ne répond pas. Enregistrement de votre commande impossible')
+        }
 } 
 
 /* orderPage: Redirect user to the confirmation frame displaying the returned order number   
@@ -756,7 +763,7 @@ if (getStorageCart().length > 0) {
         fetchSingleItem(hostServer, apiItem, singleItem[0])
             .then(getReturn => updateCurrentCart(singleItem, getReturn)) 
             .then(updateCartReturn => loadItem2DOM(updateCartReturn))
-            .catch(err => {alert('Erreur pendant le chargement du panier. Chargement incomplet ou panier corrompu')});                                                                     
+            .catch(err => {console.log('Error occurred while loading cart. Load potentially partial')});                                                                     
     });
  
     startCheckDOM();                   

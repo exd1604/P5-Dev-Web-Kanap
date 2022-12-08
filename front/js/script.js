@@ -35,7 +35,6 @@ FUNCTIONS:
     Each of the pulled item is then passed to function loadItem2WelcomePage    
 */
 async function fetchAllItems(host, api) {
-    try {
         const reply = await fetch(host + api, {
                                     method: "GET", 
                                     headers: {
@@ -46,11 +45,7 @@ async function fetchAllItems(host, api) {
             return reply.json();
         } 
 
-        throw new Error(`Erreur de communication avec le serveur. Impossible de charger le catalogue de produits`);
-
-    }   catch(error) {
-            alert('Le serveur distant ne répond pas. Chargement catalogue impossible');
-        }
+        throw 'error';   
 }
 
 /* loadItem2WelcomePage: Load item to the DOM.

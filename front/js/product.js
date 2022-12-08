@@ -43,22 +43,17 @@ const checkStyle = {
    The function uses the fetch method. The passed item id is used to load its details to the detail item page setting
 */
 async function fetchSingleItem(host, api, item) {   
-    try {
-        const reply = await fetch(host + api + item, {
-                                    method: 'GET',
-                                    headers: {
-                                        "Accept": "application/json"
-                                    }
-                            })
-        if (reply.ok === true) {
-            return reply.json();
-        }
-        
-        throw new Error(`Erreur de communication avec le serveur. Impossible de charger le produit sélectionné`);
-
-    }   catch(error) {
-            console.log('Le serveur distant ne répond pas. Chargement article demandé impossible');
-        }
+    const reply = await fetch(host + api + item, {
+                                method: 'GET',
+                                headers: {
+                                    "Accept": "application/json"
+                                }
+                        })                        
+    if (reply.ok === true) {
+        return reply.json();
+    }
+    
+    throw 'erreur'; 
 }
 
 /* loadItem2DOM: Load selected item details to the product page DOM.
@@ -68,25 +63,19 @@ async function fetchSingleItem(host, api, item) {
                 imageUrl, description, altTxt)
    The returned JSON object from the fetch is used to load item elements to the DOM 
 */
-function loadItem2DOM(getReturn) {
+function loadItem2DOM(getReturn) {    
     try {
 // Load new element(s)    
-        //const newItemImage     = newElement('img', [] , [['src', getReturn.imageUrl], ['alt', getReturn.altTxt]], null);
         document.querySelector(".item__img").appendChild(newElement('img', [] , [['src', getReturn.imageUrl], ['alt', getReturn.altTxt]], null));
 
         if (Array.isArray(getReturn.colors) && getReturn.colors.length > 0) {
             for (let i in getReturn.colors) { 
-                //const newColor = newElement('option', [] , ['value', getReturn.colors[i]], getReturn.colors[i]);
                 document.querySelector("#colors").appendChild(newElement('option', [] , ['value', getReturn.colors[i]], getReturn.colors[i]));
             }
         } 
 
-        //const newColorErrorMsg = newElement('p', [] , [['id', 'colorErrorMsg']], null);
-        //document.querySelector(".item__content__settings__color").appendChild(newElement('p', [] , [['id', 'colorErrorMsg']], null)); 
         document.querySelector(".item__content__settings__color")
             .appendChild(newElement('p', [] , [['id', 'colorErrorMsg'],['style', buildStyle(checkStyle)]], null)); 
-                
-        //const newQuantityErrorMsg = newElement('p', [] , [['id', 'quantityErrorMsg']], null);
         document.querySelector(".item__content__settings__quantity")
             .appendChild(newElement('p', [] , [['id', 'quantityErrorMsg'],['style', buildStyle(checkStyle)]], null));
 
@@ -342,10 +331,14 @@ const params = new URLSearchParams(document.location.search);
 const itemId = params.get('id');
 const itemName = params.get('name');
 
-fetchSingleItem(hostServer, apiItem, itemId)
+fetchSingleItem(hostServer, apiItem, itemId)    
     .then(getReturn => {loadItem2DOM(getReturn)}) 
     .catch(err => {
-                    alert(`Erreur pendant le chargement de l\'article ${itemName} (id: ${itemId}) sélectionné`);
+                alert(`Erreur pendant le chargement de l\'article sélectionné. 
+                       Vous allez être redirigé vers la page d\'accueil. 
+                       Réessayez un peu plus tard.
+                       Si le problème persiste, merci de nous contacter`);
+                location = './index.html';
             });
 
 getStorageCart();
@@ -358,4 +351,4 @@ cartLink.append(cartLinkElement);
 cartLink.addEventListener('click', onCartClick);
 
 // Listener on "Ajouter au panier" button click
-document.querySelector("#addToCart").addEventListener('click', onClickAdd2Cart);
+document.querySelector("#addToCart").addEventListener('click', onClickAdd2Cart);   

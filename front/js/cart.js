@@ -76,7 +76,6 @@ function getStorageCart() {
    The function uses the fetch method. The passed item id is used to load its details to the detail item page setting
 */
 async function fetchSingleItem(host, api, item) {   
-    try {
         const reply = await fetch(host + api + item, {
                                     method: 'GET',
                                     headers: {
@@ -87,11 +86,7 @@ async function fetchSingleItem(host, api, item) {
             return reply.json();
         }
         
-        throw new Error(`Erreur de communication avec le serveur. Impossible de charger les informations détaillées du produit ${item}`);
-
-    }   catch(error) {
-            console.log('Remote server failed to respond');
-        }
+        throw 'error';
 }
 
 /* updateCurrentCart: Aggregates additional item elements to the currentCart    
@@ -593,7 +588,7 @@ function checkForm(event) {
     const formFieldRegEx = {
         firstName:  /^[A-Z][a-zé]+(-[A-Z][a-zé]+)?(\s[A-Z][a-zé]+(-[A-Z][a-zé]+)?){0,2}$/,        
         lastName:   /^[A-Z][\']?[a-z]+([\s-][A-Z][\']?[a-z]+){0,5}$/,        
-        address:    /^\d{1,4}\s(rue|avenue|boulevard|place|allée|chemin|route|square)\s[A-Za-z][\']?[A-Za-z]+([\s-][A-Za-z0-9][\']?[A-Za-z0-9]{0,}){0,6}$/i,        
+        address:    /^\d{1,4}\s(rue|avenue|boulevard|place|allée|chemin|route|square)\s[A-Za-z][\']?[A-Za-zéè]+([\s-][A-Za-z0-9éè][\']?[A-Za-z0-9éè]{0,}){0,6}$/i,        
         city:       /^[A-Za-z][\']?[a-z]+([\s-][A-Za-z][\']?[A-Za-z]+){0,6}$/,
         email:      /^[a-z0-9-_.]+@[a-z0-9-_.]+\.[a-z]{2,6}$/
     }
@@ -697,10 +692,16 @@ function checkFormField(input, regEx, element, elementError) {
    - If a clean sheet, process the form submission and kick the POST request to the back end server
 */
 function sendForm(postRequest) {
-    // Fetch back end server to post order and hopefully get an order number back
+// Fetch back end server to post order and hopefully get an order number back
     postOrder(hostServer, apiItem, orderSuffix, postRequest)                     
         .then(postReturn => orderPage(postReturn))     
-        .catch(err => {alert('Un erreur s\est produite pendant la soumission de votre commande. Commande non confirmée');}); 
+        .catch(err => {
+                        alert(`Suite à un incident technique votre commande n\'a pas été enregistrée.
+                              Votre panier est toujours actif. Nous vous suggérons de réessayer un peu plus tard.
+                              Si le problème persiste contactez nous.
+                              Nous allons vous rediriger vers la page d\'accueil`);
+                        location = './index.html';
+                    }); 
 }
 
 /* postOrder: Fetch an order request including the cart content to the back end server   
@@ -721,7 +722,6 @@ function sendForm(postRequest) {
    - Array of items contained in the cart
 */
 async function postOrder(host, api, orderSuffix, postRequest) {    
-    try {
         const reply = await fetch(host + api + orderSuffix, {
                                     method: 'POST',
                                     headers: {
@@ -730,14 +730,12 @@ async function postOrder(host, api, orderSuffix, postRequest) {
                                     },
                                     body: JSON.stringify(postRequest)
                                 })
+
         if (reply.ok === true) {
                 return reply.json();
-        }        
-        throw new Error(`Le serveur distant a répondu négativement. Votre commande n\'est pas confirmée.`);
+        } 
 
-    }   catch(error) {
-            alert('Le serveur distant ne répond pas. Enregistrement de votre commande impossible')
-        }
+        throw 'error';
 } 
 
 /* orderPage: Redirect user to the confirmation frame displaying the returned order number   
@@ -748,10 +746,10 @@ async function postOrder(host, api, orderSuffix, postRequest) {
    When POSTING cart to the back end server is successfull, an order number is returned, captured and confirmation page gets displayed.
 */
 function orderPage(order) { 
-// Order number is confirmed and is going to be displayed - Existing cart can be removed off locale storage
-    localStorage.removeItem('currentCart');          
+// Order number is confirmed and is going to be displayed - Existing cart can be removed off local storage
+        localStorage.removeItem('currentCart');          
 // Shoot order confirmation page
-    location = './confirmation.html?orderId='+order.orderId;    
+        location = './confirmation.html?orderId='+order.orderId;    
 }
 
 // MAIN PROCEDURE
@@ -763,7 +761,10 @@ if (getStorageCart().length > 0) {
         fetchSingleItem(hostServer, apiItem, singleItem[0])
             .then(getReturn => updateCurrentCart(singleItem, getReturn)) 
             .then(updateCartReturn => loadItem2DOM(updateCartReturn))
-            .catch(err => {console.log('Error occurred while loading cart. Load potentially partial')});                                                                     
+            .catch(err => {
+                    console.log(`Error while loading item ${singleItem[0]}.
+                                 The load is incomplete so the checkDomLoaded will stop the process and redirect user to home page`);                                                                                             
+                    });
     });
  
     startCheckDOM();                   

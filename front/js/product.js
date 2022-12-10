@@ -204,7 +204,8 @@ function onClickAdd2Cart(event) {
 // Check quantity
     const itemCartIndex = currentCart.findIndex(itemCart => itemCart[0] == itemId && itemCart[1] == selectedColorValue);        
     enteredQuantity     = fixNan(document.querySelector("#quantity").value, 10);
-    quantityPassed      = checkQuantity(enteredQuantity, colorPassed);
+    //quantityPassed      = checkQuantity(enteredQuantity, colorPassed, selectedColorValue);
+    quantityPassed      = checkQuantity(enteredQuantity, colorPassed, itemCartIndex);
 
     if (colorPassed && quantityPassed) {
             feedCart(itemId, selectedColorValue, enteredQuantity, itemCartIndex);
@@ -242,7 +243,6 @@ function checkColor(selectedColorValue) {
     } 
     elementColor.style.backgroundColor = null;
     elementColorErrorMsg.textContent = ' ';
-    //elementColorErrorMsg.style.fontWeight = null;
     return true; 
 }
 
@@ -256,18 +256,22 @@ function checkColor(selectedColorValue) {
 
    Shoots an error if entered quantity not valid   
 */
-function checkQuantity(enteredQuantity, colorPassed) { 
+function checkQuantity(enteredQuantity, colorPassed, i) { 
     const elementQuantity = document.querySelector("#quantity"); 
     const elementQuantityErrorMsg = document.querySelector("#quantityErrorMsg");
     if ((enteredQuantity <= 0) || (enteredQuantity > 100)) {
         elementQuantity.style.backgroundColor = '#fbbcbc';
         if (colorPassed) {
                 elementQuantity.focus();
-        } 
+        }     
         elementQuantityErrorMsg.textContent = 'La quantité entrée est invalide. Doit être comprise entre 1 et 100 maximum';
-        //alert(`Quantité entrée est invalide. Doit être comprise entre 1 et 100 maximum`);                                
         return false;        
-    }   
+    }
+
+    if (i >= 0 && enteredQuantity+currentCart[i][2]> 100) {
+            elementQuantityErrorMsg.textContent = `Cet article/couleur a une quantité de ${currentCart[i][2]} dans le panier. L\'ajout de ${enteredQuantity} pièces rend le total supérieur à 100. Mise à jour article impossible`;
+            return false;        
+    }
         elementQuantity.style.backgroundColor = null;                     
         elementQuantityErrorMsg.textContent = ' ';
         return true;                    
@@ -293,10 +297,10 @@ function feedCart (itemId, selectedColorValue, enteredQuantity, itemCartIndex) {
                 alert(`Article ${itemName}, couleur ${selectedColorValue} quantité ${enteredQuantity} va être ajouté au panier`);        
         }   else {
                 const cartQuantityB4Change = currentCart[itemCartIndex][2];
-                currentCart[itemCartIndex][2] = enteredQuantity; 
+                currentCart[itemCartIndex][2] += enteredQuantity; 
                 alert(`Quantité panier pour l\'article ${itemName}, couleur ${selectedColorValue} va être modifiée.
                        Quantité panier avant modification est ${cartQuantityB4Change}
-                       Quantité panier aprés modification sera ${enteredQuantity}`);
+                       Quantité panier aprés modification sera ${currentCart[itemCartIndex][2]}`);
             }         
 
 // Update local storage            
